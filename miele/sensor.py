@@ -12,6 +12,7 @@ _LOGGER = logging.getLogger(__name__)
 
 ALL_DEVICES = []
 
+
 def _map_key(key):
     if key == 'status':
         return 'Status'
@@ -30,6 +31,7 @@ def _map_key(key):
     elif key == 'startTime':
         return 'Start Time'
 
+
 def _to_seconds(time_array):
     if len(time_array) == 3:
         return time_array[0] * 3600 + time_array[1] * 60 + time_array[2]
@@ -37,6 +39,7 @@ def _to_seconds(time_array):
         return time_array[0] * 3600 + time_array[1] * 60
     else:
         return 0
+
 
 # pylint: disable=W0612
 def setup_platform(hass, config, add_devices, discovery_info=None):
@@ -67,9 +70,11 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
         add_devices(sensors)
         ALL_DEVICES = ALL_DEVICES + sensors
 
+
 def update_device_state():
     for device in ALL_DEVICES:
         device.async_schedule_update_ha_state(True)
+
 
 class MieleRawSensor(Entity):
 
@@ -110,6 +115,7 @@ class MieleRawSensor(Entity):
             _LOGGER.error('Miele device disappeared: {}'.format(self.device_id))
         else:
             self._device = self._hass.data[MIELE_DOMAIN][DATA_DEVICES][self.device_id]
+
 
 class MieleStatusSensor(MieleRawSensor):
     def __init(self, client, device, key):
@@ -163,7 +169,15 @@ class MieleStatusSensor(MieleRawSensor):
                 attributes['finishTime'] = None
             else:
                 now = datetime.now()
-                attributes['finishTime'] = (now + timedelta(seconds=remainingTime)).strftime('%H:%M')
+                attributes['finishTime'] = (now + timedelta(seconds=startTime) + timedelta(seconds=remainingTime)).strftime('%H:%M')
+
+            # Calculate start time
+            if startTime == 0:
+                now = datetime.now()
+                attributes['kickoffTime'] = (now - timedelta(seconds=elapsedTime)).strftime('%H:%M')
+            else:
+                now = datetime.now()
+                attributes['kickoffTime'] = (now + timedelta(seconds=startTime)).strftime('%H:%M')
 
         return attributes
 
@@ -180,6 +194,7 @@ class MieleTimeSensor(MieleRawSensor):
             return None
         else:
             return '{:02d}:{:02d}'.format(state_value[0], state_value[1])
+
 
 class MieleTemperatureSensor(Entity):
 
